@@ -23,8 +23,8 @@ class Battlesnake(object):
             "apiversion": "1",
             "author": "dj0wns",
             "color": "#BC1655",
-            "head": "default",  # TODO: Personalize
-            "tail": "default",  # TODO: Personalize
+            "head": "silly",  # TODO: Personalize
+            "tail": "curled",  # TODO: Personalize
         }
 
     @cherrypy.expose
