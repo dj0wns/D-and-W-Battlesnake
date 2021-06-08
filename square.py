@@ -4,6 +4,14 @@ class Square:
     self.set_empty()
     self.snake_distances = {}
 
+  def __str__(self):
+    string = ( f"contains_food: {self.contains_food}\n"
+               f"contains_snake: {self.contains_snake}\n"
+               f"contains_snake_head: {self.contains_snake_head}\n"
+               f"distance_to_vacant: {self.distance_to_vacant}\n"
+               f"snake_distances: {self.snake_distances}\n" )
+    return string
+
   # OCCUPANT INFO
   def set_empty(self):
     self.contains_food = False

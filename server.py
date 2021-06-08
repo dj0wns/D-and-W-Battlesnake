@@ -3,7 +3,7 @@ import random
 
 import cherrypy
 
-import board
+from board import Board
 import evaluator
 
 """
@@ -49,18 +49,14 @@ class Battlesnake(object):
         our_snake_id = data["you"]["id"]
 
         # initialize board from json data
-        board = board.Board()
+        board = Board()
         board.parse_board(data["board"])
         # Calculate distances to each square for each snake
         board.calculate_snakes_distances()
+        #print(board)
 
         # from this board, pick the best move
-        #return evaluator.pick_best_move(board, our_snake_id)
-
-        # Choose a random direction to move in
-        # TODO REMOVE
-        possible_moves = ["up", "down", "left", "right"]
-        move = random.choice(possible_moves)
+        move = evaluator.pick_best_move(board, our_snake_id)
 
         print(f"MOVE: {move}")
         return {"move": move}
