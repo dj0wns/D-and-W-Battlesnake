@@ -3,6 +3,9 @@ import random
 
 import cherrypy
 
+import board
+import evaluator
+
 """
 This is a simple Battlesnake server written in Python.
 For instructions see https://github.com/BattlesnakeOfficial/starter-snake-python/README.md
@@ -40,10 +43,22 @@ class Battlesnake(object):
     def move(self):
         # This function is called on every turn of a game. It's how your snake decides where to move.
         # Valid moves are "up", "down", "left", or "right".
-        # TODO: Use the information in cherrypy.request.json to decide your next move.
         data = cherrypy.request.json
 
+        # keep note of our snake id
+        our_snake_id = data["you"]["id"]
+
+        # initialize board from json data
+        board = board.Board()
+        board.parse_board(data["board"])
+        # Calculate distances to each square for each snake
+        board.calculate_snakes_distances()
+
+        # from this board, pick the best move
+        #return evaluator.pick_best_move(board, our_snake_id)
+
         # Choose a random direction to move in
+        # TODO REMOVE
         possible_moves = ["up", "down", "left", "right"]
         move = random.choice(possible_moves)
 
