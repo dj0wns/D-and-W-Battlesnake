@@ -32,12 +32,13 @@ class Board:
         if i == 0:
           self.squares[body["x"]][body["y"]].set_contains_snake_head(snake["id"], snake["length"])
         else:
-          self.squares[body["x"]][body["y"]].set_contains_snake(snake["id"], snake["length"])
+          self.squares[body["x"]][body["y"]].set_contains_snake(snake["id"], snake["length"] - i)
 
   def __str__(self):
     string = ( f"Width: {self.width}\n"
                f"Height: {self.height}\n"
-               f"Food: {self.food}\n" )
+               f"Food: {self.food}\n" 
+               f"Snakes: {self.snakes}\n" )
     x = 0
     for column in self.squares:
       y = 0
@@ -48,7 +49,7 @@ class Board:
     return string
 
   # NAVIGATION
-  def is_valid_destination(self, snake_id, coordinates):
+  def is_valid_destination(self, snake_id, coordinates, distance):
 
     # check if coordinates are out of bounds
     x, y = coordinates
@@ -58,57 +59,48 @@ class Board:
     # check if square contains snake
     square = self.squares[x][y]
     if square.contains_snake is not None:
-      # check if square contains head of larger/equal snake
-      if square.contains_snake_head:
-        # TODO: store self.snakes as dictionary with snake_id as keys
-        our_snake_length = 0 # TODO
-        their_snake_length = 0 # TODO
-        if their_snake_length >= our_snake_length:
-          return False
-      else:
+      if square.distance_to_vacant > distance:
         return False
-
     return True
 
-  def get_valid_neighbor_up(self, snake_id, x, y):
+  def get_valid_neighbor_up(self, snake_id, x, y, distance=1):
     neighbor = (x, y+1)
-    return neighbor if self.is_valid_destination(snake_id, neighbor) \
+    return neighbor if self.is_valid_destination(snake_id, neighbor, distance) \
         else (None, None)
 
-  def get_valid_neighbor_down(self, snake_id, x, y):
+  def get_valid_neighbor_down(self, snake_id, x, y, distance=1):
     neighbor = (x, y-1)
-    return neighbor if self.is_valid_destination(snake_id, neighbor) \
+    return neighbor if self.is_valid_destination(snake_id, neighbor, distance) \
         else (None, None)
 
-  def get_valid_neighbor_left(self, snake_id, x, y):
+  def get_valid_neighbor_left(self, snake_id, x, y, distance=1):
     neighbor = (x-1, y)
-    return neighbor if self.is_valid_destination(snake_id, neighbor) \
+    return neighbor if self.is_valid_destination(snake_id, neighbor, distance) \
         else (None, None)
 
-  def get_valid_neighbor_right(self, snake_id, x, y):
+  def get_valid_neighbor_right(self, snake_id, x, y, distance=1):
     neighbor = (x+1, y)
-    return neighbor if self.is_valid_destination(snake_id, neighbor) \
+    return neighbor if self.is_valid_destination(snake_id, neighbor, distance) \
         else (None, None)
   
   def calculate_snakes_distances(self):
     for snake in self.snakes.values():
       #init queue
       bfs_queue = queue.SimpleQueue()
-      depth = 1
       #breath first search for each snake
       starting_x = snake["head"]["x"]
       starting_y = snake["head"]["y"]
       # TODO touches every square at least twice when backtracking
-      x, y = self.get_valid_neighbor_up(snake["id"], starting_x, starting_y)
+      x, y = self.get_valid_neighbor_up(snake["id"], starting_x, starting_y, 1)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_down(snake["id"], starting_x, starting_y)
+      x, y = self.get_valid_neighbor_down(snake["id"], starting_x, starting_y, 1)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_left(snake["id"], starting_x, starting_y)
+      x, y = self.get_valid_neighbor_left(snake["id"], starting_x, starting_y, 1)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_right(snake["id"], starting_x, starting_y)
+      x, y = self.get_valid_neighbor_right(snake["id"], starting_x, starting_y, 1)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
       # execute queue
@@ -119,16 +111,16 @@ class Board:
         if last_distance is None:
           current_square.set_snake_distance(snake["id"], current_item["depth"])
           # now add children to the queue
-          x, y = self.get_valid_neighbor_up(snake["id"], current_item["x"], current_item["y"])
+          x, y = self.get_valid_neighbor_up(snake["id"], current_item["x"], current_item["y"], current_item["depth"]+1)
           if x is not None:
             bfs_queue.put({"x":x, "y":y, "depth":current_item["depth"]+1})
-          x, y = self.get_valid_neighbor_down(snake["id"], current_item["x"], current_item["y"])
+          x, y = self.get_valid_neighbor_down(snake["id"], current_item["x"], current_item["y"], current_item["depth"]+1)
           if x is not None:
             bfs_queue.put({"x":x, "y":y, "depth":current_item["depth"]+1})
-          x, y = self.get_valid_neighbor_left(snake["id"], current_item["x"], current_item["y"])
+          x, y = self.get_valid_neighbor_left(snake["id"], current_item["x"], current_item["y"], current_item["depth"]+1)
           if x is not None:
             bfs_queue.put({"x":x, "y":y, "depth":current_item["depth"]+1})
-          x, y = self.get_valid_neighbor_right(snake["id"], current_item["x"], current_item["y"])
+          x, y = self.get_valid_neighbor_right(snake["id"], current_item["x"], current_item["y"], current_item["depth"]+1)
           if x is not None:
             bfs_queue.put({"x":x, "y":y, "depth":current_item["depth"]+1})
 

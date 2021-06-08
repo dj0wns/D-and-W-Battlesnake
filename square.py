@@ -29,7 +29,9 @@ class Square:
     self.contains_food = False
     self.contains_snake = snake_id
     self.contains_snake_head = False
-    self.distance_to_vacant = distance_to_vacant
+    if distance_to_vacant > self.distance_to_vacant:
+      # special case to handle how the snake is stacked in the beginning
+      self.distance_to_vacant = distance_to_vacant
 
   def set_contains_snake_head(self, snake_id, distance_to_vacant):
     self.contains_food = False
@@ -44,6 +46,9 @@ class Square:
   def decrement_distance_to_vacant(self):
     if self.distance_to_vacant > 0:
       self.distance_to_vacant -= 1
+    self.contains_snake_head = False
+    if self.distance_to_vacant == 0:
+      self.contains_snake = None
 
   def is_empty(self):
     return not (self.contains_food or self.contains_snake)
