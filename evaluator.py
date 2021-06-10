@@ -97,9 +97,19 @@ def pick_best_move(board, snake_id):
 
 # makes a new representation of the board if the given snake moved to the given square
 # TODO move other snakes aswell, we are moving their tails but not their heads
-# TODO account for picking up food for either us or other snakes
+# TODO account for picking up food for other snakes
 # TODO account for head on collisions
 def simulate_board_with_move(board, snake_id, x, y):
+  # Cache tail object so we can add it in after the copy to represent eating food
+  ate_food = False
+  new_tail_x = -1
+  new_tail_y = -1
+  if board.squares[x][y].contains_food:
+    #we at food!
+    ate_food = True
+    new_tail_x = board.snakes[snake_id]["body"][-1]["x"]
+    new_tail_y = board.snakes[snake_id]["body"][-1]["y"]
+
   new_board = copy.deepcopy(board)
   # decrement all squares  
   # TODO potentially move this logic to the square.__deepcpy__() function so they are only touched once.
@@ -107,6 +117,14 @@ def simulate_board_with_move(board, snake_id, x, y):
     for square in column:
       square.decrement_distance_to_vacant()
       square.clear_snake_distances()
+  if ate_food:
+    # add to body and increase length by 1 and then increment all other body parts
+    new_board.snakes[snake_id]["length"] += 1
+    new_board.squares[new_tail_x][new_tail_y].set_contains_snake(snake_id, 1)
+    for cell in new_board.snakes[snake_id]["body"]:
+      new_board.square[cell["x"]][cell["y"]].increment_distance_to_vacent()
+    new_board.snakes[snake_id]["body"].append({"x":new_tail_x, "y":new_tail_y})
+
   new_board.snakes[snake_id]["head"]["x"] = x
   new_board.snakes[snake_id]["head"]["y"] = y
   new_board.squares[x][y].set_contains_snake_head(snake_id, new_board.snakes[snake_id]["length"])
