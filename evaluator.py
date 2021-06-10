@@ -10,8 +10,8 @@ def pick_best_move(board, snake_id):
   best_score = -1
   best_risky_score = -1 #risky means that there is a chance we will run into the head of an equal or larger snake
   # TODO track list of best directions that tie and return random of them
-  chosen_direction = ""
-  chosen_risky_direction = ""
+  chosen_direction = []
+  chosen_risky_direction = []
   
   # TODO clean this up, it's almost the same thing 4x
   i,j = board.get_valid_neighbor_up(snake_id, x, y)
@@ -23,11 +23,15 @@ def pick_best_move(board, snake_id):
     if risky:
       if new_board_value > best_risky_score:
         best_risky_score = new_board_value
-        chosen_risky_direction = "up"
+        chosen_risky_direction = ["up"]
+      elif new_board_value == best_risky_score:
+        chosen_risky_direction.append("up")
     else:
       if new_board_value > best_score:
         best_score = new_board_value
-        chosen_direction = "up"
+        chosen_direction = ["up"]
+      elif new_board_value == best_score:
+        chosen_direction.append("up")
   
   i,j = board.get_valid_neighbor_down(snake_id, x, y)
   if i is not None:
@@ -38,11 +42,15 @@ def pick_best_move(board, snake_id):
     if risky:
       if new_board_value > best_risky_score:
         best_risky_score = new_board_value
-        chosen_risky_direction = "down"
+        chosen_risky_direction = ["down"]
+      elif new_board_value == best_risky_score:
+        chosen_risky_direction.append("down")
     else:
       if new_board_value > best_score:
         best_score = new_board_value
-        chosen_direction = "down"
+        chosen_direction = ["down"]
+      elif new_board_value == best_score:
+        chosen_direction.append("down")
   
   i,j = board.get_valid_neighbor_left(snake_id, x, y)
   if i is not None:
@@ -53,11 +61,15 @@ def pick_best_move(board, snake_id):
     if risky:
       if new_board_value > best_risky_score:
         best_risky_score = new_board_value
-        chosen_risky_direction = "left"
+        chosen_risky_direction = ["left"]
+      elif new_board_value == best_risky_score:
+        chosen_risky_direction.append("left")
     else:
       if new_board_value > best_score:
         best_score = new_board_value
-        chosen_direction = "left"
+        chosen_direction = ["left"]
+      elif new_board_value == best_score:
+        chosen_direction.append("left")
   
   i,j = board.get_valid_neighbor_right(snake_id, x, y)
   if i is not None:
@@ -68,16 +80,20 @@ def pick_best_move(board, snake_id):
     if risky:
       if new_board_value > best_risky_score:
         best_risky_score = new_board_value
-        chosen_risky_direction = "right"
+        chosen_risky_direction = ["right"]
+      elif new_board_value == best_risky_score:
+        chosen_risky_direction.append("right")
     else:
       if new_board_value > best_score:
         best_score = new_board_value
-        chosen_direction = "right"
+        chosen_direction = ["right"]
+      elif new_board_value == best_score:
+        chosen_direction.append("right")
 
   if chosen_direction:
-    return chosen_direction
+    return random.choice(chosen_direction)
   else:
-    return chosen_risky_direction
+    return random.choice(chosen_risky_direction)
 
 # makes a new representation of the board if the given snake moved to the given square
 # TODO move other snakes aswell, we are moving their tails but not their heads
@@ -105,8 +121,8 @@ def evaluate_board(original_board, board, snake_id):
   for column in board.squares:
     for square in column:
       closest_snakes = square.get_closest_snake()
-      if closest_snakes.contains(snake_id):
-        if len(closest_snakes) == 1 or self.get_largest_snakes(closest_snakes) == snake_id:
+      if snake_id in closest_snakes:
+        if len(closest_snakes) == 1 or board.get_largest_snakes(closest_snakes) == snake_id:
           closest_square_count += 1
   move_score = closest_square_count
   # Adjust for hunger
@@ -117,7 +133,8 @@ def evaluate_board(original_board, board, snake_id):
       # add factor to lightly encourage our snake to go towards the food
       # max hunger minus current hunger divided by a constant is a good simple way to account for this
       # if a new closer food is spawned out of nowhere it doesnt really affect anything
-      move_score += (100 - board.snakes[snake_id]["health"])/2
+      if board.snakes[snake_id]["health"] < 80:
+        move_score += (80 - board.snakes[snake_id]["health"])/2
   return move_score
 
 def check_if_adjacent_longer_enemy_head(board, snake_id, x, y):

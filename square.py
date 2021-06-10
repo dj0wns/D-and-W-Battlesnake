@@ -76,6 +76,6 @@ class Square:
       if closest_distance is None or distance < closest_distance:
         closest_snake = [snake_id]
         closest_distance = distance
-      if distance == closest_distance:
+      elif distance == closest_distance:
         closest_snake.append(snake_id)
     return closest_snake
