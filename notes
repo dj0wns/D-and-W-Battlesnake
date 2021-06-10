@@ -1,0 +1,46 @@
+Order of things to do based on value:
+  1. Add food to Evaluator
+  2. Simulate other snakes when evaluating new positions
+  3. Add benchmarking to keep track of how long our algorithm takes from start to finish
+  4. Increase depth of new positions scanning (alpha-beta pruning?) - Try with depth of 2 first, exhaustive search.
+  5. Implement variable depth to take full advantage of our compute time. 
+
+
+
+Good moves:
+  - Look into punishing other snakes?
+  - When is moving onto another snakes head relevant/how to quantify?
+  - Increase depth to evaluator
+  - Look into killing other small snakes if the area evaluation makes sense. 
+  - We need something to handle when 2 heads cover the same tile? (Maybe solve this with the simulate board logic to remove the other snake)
+
+Adding Food to the evaluator:
+
+Goals
+ - If health is equal to the distance to the closest food we 100% have to go for it
+  - If we are exceedingly low health, we would want to leave early to have more wiggle room, prevent starvation
+  - Move towards it even if we still have a lot of time. 
+  - Look into food spawning algorithm - maybe distance to food vs probability of food spawning in areas we control is higher than that of the nearest food as a parameter to make that decision.
+
+Idea 1: Put little emphasis food unless needed - keep as much focus as possible on board control, effectively ignore food unless absolutely needed
+  Pros:
+    - Keep strong control of the board
+  Cons:
+    - We will almost always be the smallest snake on the board
+      - Reduces the pressure we are able to exert on other snakes
+    - A smart snake could theoretically starve us out.
+    - May fail in the super late game when there arent many free squares
+
+Idea 2: Give food a constant weight so if we are close we will always pick it up:
+  Pros:
+    - We will in general have a larger size
+  Cons:
+    - We are sacrificing area
+
+
+Idea 1 approaches:
+  1. Sliding Scale, food starts low in value and increases according to some function (linearly, quadratically)
+    - Want food to be appealing to grab but only when it concedes as little area as possible unless its needed
+  2. Ignore food completely unless under a threshold and then be hungry hungry hippo
+    - Is getting food over 60 stamina even relevant??
+

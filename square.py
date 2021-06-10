@@ -69,11 +69,13 @@ class Square:
         if snake_id in self.snake_distances.keys() else None
 
   def get_closest_snake(self):
-    closest_snake = None
+    closest_snake = []
     closest_distance = None
     for snake_id in self.snake_distances.keys():
       distance = self.snake_distances[snake_id]
       if closest_distance is None or distance < closest_distance:
-        closest_snake = snake_id
+        closest_snake = [snake_id]
         closest_distance = distance
+      if distance == closest_distance:
+        closest_snake.append(snake_id)
     return closest_snake

@@ -43,6 +43,7 @@ class Battlesnake(object):
     def move(self):
         # This function is called on every turn of a game. It's how your snake decides where to move.
         # Valid moves are "up", "down", "left", or "right".
+        # TODO Start Timer
         data = cherrypy.request.json
 
         # keep note of our snake id
@@ -57,6 +58,7 @@ class Battlesnake(object):
 
         # from this board, pick the best move
         move = evaluator.pick_best_move(board, our_snake_id)
+        #TODO end timer
 
         print(f"MOVE: {move}")
         return {"move": move}

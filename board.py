@@ -82,6 +82,30 @@ class Board:
     neighbor = (x+1, y)
     return neighbor if self.is_valid_destination(snake_id, neighbor, distance) \
         else (None, None)
+
+  def get_largest_snakes(self, snake_ids):
+    max_length = 0
+    long_snakes = []
+    for snake_id in snake_ids:
+      if self.snakes[snake_id]["length"] > max_length:
+        max_length = self.snakes[snake_id]["length"]
+        long_snakes = [snake_id]
+      else:
+        long_snakes.append(snake_id)
+    return long_snakes
+
+  def get_distance_to_closest_owned_food(self, snake_id):
+    closest_food_distance = None
+    for food in self.food:
+      x = food["x"]
+      y = food["y"]
+      closest_snakes = self.squares[x][y].get_closest_snake()
+      if closest_snakes.contains(snake_id):
+        if len(closest_snakes) == 1 or self.get_largest_snakes(closest_snakes) == snake_id:
+          distance = self.squares[x][y].get_snake_distance(snake_id)
+          if closest_food_distance is None or distance < closest_food_distance:
+            closest_food_distance = distance
+    return closest_food_distance
   
   def calculate_snakes_distances(self):
     for snake in self.snakes.values():
