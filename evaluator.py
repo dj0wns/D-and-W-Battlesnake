@@ -3,97 +3,64 @@ import copy
 
 import board
 
-def pick_best_move(board, snake_id):
-  # get current location
-  x = board.snakes[snake_id]["head"]["x"]
-  y = board.snakes[snake_id]["head"]["y"]
-  best_score = -1
-  best_risky_score = -1 #risky means that there is a chance we will run into the head of an equal or larger snake
-  # TODO track list of best directions that tie and return random of them
-  chosen_direction = []
-  chosen_risky_direction = []
-  
-  # TODO clean this up, it's almost the same thing 4x
-  i,j = board.get_valid_neighbor_up(snake_id, x, y)
-  if i is not None:
-    new_board = simulate_board_with_move(board, snake_id, i, j)
-    new_board_value = evaluate_board(board, new_board, snake_id)
-    risky = check_if_adjacent_longer_enemy_head(board, snake_id, i, j)
-    print("up", new_board_value, risky)
-    if risky:
-      if new_board_value > best_risky_score:
-        best_risky_score = new_board_value
-        chosen_risky_direction = ["up"]
-      elif new_board_value == best_risky_score:
-        chosen_risky_direction.append("up")
-    else:
-      if new_board_value > best_score:
-        best_score = new_board_value
-        chosen_direction = ["up"]
-      elif new_board_value == best_score:
-        chosen_direction.append("up")
-  
-  i,j = board.get_valid_neighbor_down(snake_id, x, y)
-  if i is not None:
-    new_board = simulate_board_with_move(board, snake_id, i, j)
-    new_board_value = evaluate_board(board, new_board, snake_id)
-    risky = check_if_adjacent_longer_enemy_head(board, snake_id, i, j)
-    print("down", new_board_value, risky)
-    if risky:
-      if new_board_value > best_risky_score:
-        best_risky_score = new_board_value
-        chosen_risky_direction = ["down"]
-      elif new_board_value == best_risky_score:
-        chosen_risky_direction.append("down")
-    else:
-      if new_board_value > best_score:
-        best_score = new_board_value
-        chosen_direction = ["down"]
-      elif new_board_value == best_score:
-        chosen_direction.append("down")
-  
-  i,j = board.get_valid_neighbor_left(snake_id, x, y)
-  if i is not None:
-    new_board = simulate_board_with_move(board, snake_id, i, j)
-    new_board_value = evaluate_board(board, new_board, snake_id)
-    risky = check_if_adjacent_longer_enemy_head(board, snake_id, i, j)
-    print("left", new_board_value, risky)
-    if risky:
-      if new_board_value > best_risky_score:
-        best_risky_score = new_board_value
-        chosen_risky_direction = ["left"]
-      elif new_board_value == best_risky_score:
-        chosen_risky_direction.append("left")
-    else:
-      if new_board_value > best_score:
-        best_score = new_board_value
-        chosen_direction = ["left"]
-      elif new_board_value == best_score:
-        chosen_direction.append("left")
-  
-  i,j = board.get_valid_neighbor_right(snake_id, x, y)
-  if i is not None:
-    new_board = simulate_board_with_move(board, snake_id, i, j)
-    new_board_value = evaluate_board(board, new_board, snake_id)
-    risky = check_if_adjacent_longer_enemy_head(board, snake_id, i, j)
-    print("right", new_board_value, risky)
-    if risky:
-      if new_board_value > best_risky_score:
-        best_risky_score = new_board_value
-        chosen_risky_direction = ["right"]
-      elif new_board_value == best_risky_score:
-        chosen_risky_direction.append("right")
-    else:
-      if new_board_value > best_score:
-        best_score = new_board_value
-        chosen_direction = ["right"]
-      elif new_board_value == best_score:
-        chosen_direction.append("right")
+BUCKETS = ["normal", "risky"]
 
-  if chosen_direction:
-    return random.choice(chosen_direction)
-  else:
-    return random.choice(chosen_risky_direction)
+
+def check_turns_until_risky(board, snake_id, x, y):
+  turns_until_risky = 0 # no foreseen riskiness
+  if check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
+    turns_until_risky = 1
+  return turns_until_risky
+
+
+def bucketize_move(move, best_moves, board, snake_id):
+
+  x, y = board.get_valid_neighbor(
+      move,
+      snake_id,
+      board.snakes[snake_id]["head"]["x"],
+      board.snakes[snake_id]["head"]["y"])
+  bucket = "normal"
+
+  # if valid move
+  if x is not None:
+    new_board = simulate_board_with_move(board, snake_id, x, y)
+    new_board_value = evaluate_board(board, new_board, snake_id)
+
+    # check riskiness
+    turns_until_risky = check_turns_until_risky(board, snake_id, x, y)
+    if turns_until_risky:
+      bucket = "risky"
+
+    # check if move is better
+    if new_board_value > best_moves[bucket]["score"]:
+      best_moves[bucket]["score"] = new_board_value
+      best_moves[bucket]["moves"] = [move]
+    elif new_board_value == best_moves[bucket]["score"]:
+      best_moves[bucket]["moves"].append(move)
+
+
+def pick_best_move(board, snake_id):
+  best_moves = {
+    "normal": {
+      "score": -1,
+      "moves": [],
+    },
+    "risky": {
+      "score": -1,
+      "moves": [],
+    },
+  }
+  for move in board.MOVES.keys():
+    bucketize_move(move, best_moves, board, snake_id)
+  
+  # return move from best bucket
+  for bucket in BUCKETS:
+    if best_moves[bucket]["moves"]:
+      return random.choice(best_moves[bucket]["moves"])
+  print("No valid moves.")
+  return random.choice(board.MOVES.keys())
+
 
 # makes a new representation of the board if the given snake moved to the given square
 # TODO move other snakes aswell, we are moving their tails but not their heads

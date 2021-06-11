@@ -2,6 +2,13 @@ import square
 import queue
 
 class Board:
+  MOVES = {
+      "up": self.get_valid_neighbor_up,
+      "down": self.get_valid_neighbor_down,
+      "left": self.get_valid_neighbor_left,
+      "right": self.get_valid_neighbor_right,
+    }
+
   def __init__(self):
     self.width = -1
     self.height = -1
@@ -62,6 +69,9 @@ class Board:
       if square.distance_to_vacant > distance:
         return False
     return True
+
+  def get_valid_neighbor(self, move, snake_id, x, y, distance=1):
+    return self.MOVES[move](snake_id, x, y, distance)
 
   def get_valid_neighbor_up(self, snake_id, x, y, distance=1):
     neighbor = (x, y+1)
