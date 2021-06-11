@@ -12,6 +12,20 @@ class Square:
                f"snake_distances: {self.snake_distances}\n" )
     return string
 
+  # TODO: move this to custom function here and in board class instead of changing deepcopy
+  # this is called when simulating a new board state
+  #   should clear heads (handled in later step)
+  #   should automatically move tail forward
+  #   should clear snake distances (handled in later step)
+  def __deepcopy__(self):
+    copy = type(self)()
+
+    copy.contains_food = self.contains_food
+    copy.contains_snake = self.contains_snake
+    copy.distance_to_vacant = self.distance_to_vacant - 1 if self.distance_to_vacant else 0
+
+    return copy
+
   # OCCUPANT INFO
   def set_empty(self):
     self.contains_food = False

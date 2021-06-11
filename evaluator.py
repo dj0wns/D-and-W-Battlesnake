@@ -6,11 +6,26 @@ import board
 BUCKETS = ["normal", "risky"]
 
 
-def check_turns_until_risky(board, snake_id, x, y):
-  turns_until_risky = 0 # no foreseen riskiness
-  if check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
-    turns_until_risky = 1
-  return turns_until_risky
+def pick_best_move(board, snake_id):
+  best_moves = {
+    "normal": {
+      "score": -1,
+      "moves": [],
+    },
+    "risky": {
+      "score": -1,
+      "moves": [],
+    },
+  }
+  for move in board.MOVES.keys():
+    bucketize_move(move, best_moves, board, snake_id)
+
+  # return move from best bucket
+  for bucket in BUCKETS:
+    if best_moves[bucket]["moves"]:
+      return random.choice(best_moves[bucket]["moves"])
+  print("No valid moves.")
+  return random.choice(board.MOVES.keys())
 
 
 def bucketize_move(move, best_moves, board, snake_id):
@@ -40,63 +55,46 @@ def bucketize_move(move, best_moves, board, snake_id):
       best_moves[bucket]["moves"].append(move)
 
 
-def pick_best_move(board, snake_id):
-  best_moves = {
-    "normal": {
-      "score": -1,
-      "moves": [],
-    },
-    "risky": {
-      "score": -1,
-      "moves": [],
-    },
-  }
-  for move in board.MOVES.keys():
-    bucketize_move(move, best_moves, board, snake_id)
-  
-  # return move from best bucket
-  for bucket in BUCKETS:
-    if best_moves[bucket]["moves"]:
-      return random.choice(best_moves[bucket]["moves"])
-  print("No valid moves.")
-  return random.choice(board.MOVES.keys())
-
-
 # makes a new representation of the board if the given snake moved to the given square
 # TODO move other snakes aswell, we are moving their tails but not their heads
 # TODO account for picking up food for other snakes
-# TODO account for head on collisions
 def simulate_board_with_move(board, snake_id, x, y):
-  # Cache tail object so we can add it in after the copy to represent eating food
-  ate_food = False
-  new_tail_x = -1
-  new_tail_y = -1
-  if board.squares[x][y].contains_food:
-    #we at food!
-    ate_food = True
-    new_tail_x = board.snakes[snake_id]["body"][-1]["x"]
-    new_tail_y = board.snakes[snake_id]["body"][-1]["y"]
 
   new_board = copy.deepcopy(board)
-  # decrement all squares  
-  # TODO potentially move this logic to the square.__deepcpy__() function so they are only touched once.
-  for column in new_board.squares:
-    for square in column:
-      square.decrement_distance_to_vacant()
-      square.clear_snake_distances()
-  if ate_food:
-    # add to body and increase length by 1 and then increment all other body parts
-    new_board.snakes[snake_id]["length"] += 1
-    new_board.squares[new_tail_x][new_tail_y].set_contains_snake(snake_id, 1)
-    for cell in new_board.snakes[snake_id]["body"]:
-      new_board.squares[cell["x"]][cell["y"]].increment_distance_to_vacant()
-    new_board.snakes[snake_id]["body"].append({"x":new_tail_x, "y":new_tail_y})
 
+  # simulate movement:
+  #   construct new body by prepending head and adding all but the last body
   new_board.snakes[snake_id]["head"]["x"] = x
   new_board.snakes[snake_id]["head"]["y"] = y
+  new_board.snakes[snake_id]["body"] = [new_board.snakes[snake_id]["head"]] + new_board.snakes[snake_id]["body"][:-1]
+  # Update squares too
   new_board.squares[x][y].set_contains_snake_head(snake_id, new_board.snakes[snake_id]["length"])
+
+  simulate_if_ate_food(
+      board.squares[x][y],
+      board.snakes[snake_id]["body"][-1],
+      new_board,
+      snake_id)
+
   new_board.calculate_snakes_distances()
+
   return new_board
+
+
+def simulate_if_ate_food(square, old_tail, new_board, snake_id):
+  if square.contains_food:
+
+    # increment snake length
+    new_board.snakes[snake_id]["length"] += 1
+
+    # increment each snake segment's distance to vacant
+    for cell in new_board.snakes[snake_id]["body"]:
+      new_board.squares[cell["x"]][cell["y"]].increment_distance_to_vacant()
+
+    # add new tail to snake body
+    new_board.snakes[snake_id]["body"].append(old_tail)
+    new_board.squares[old_tail["x"]][old_tail["y"]].set_contains_snake(snake_id, 1)
+
 
 def evaluate_board(original_board, board, snake_id):
   #count how many squares we would be able to get to first
@@ -128,6 +126,14 @@ def evaluate_board(original_board, board, snake_id):
       else:
         move_score += (30 - board.snakes[snake_id]["health"])
   return move_score
+
+
+def check_turns_until_risky(board, snake_id, x, y):
+  turns_until_risky = 0 # no foreseen riskiness
+  if check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
+    turns_until_risky = 1
+  return turns_until_risky
+
 
 def check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
   if x > 0 and board.squares[x-1][y].contains_snake_head:
