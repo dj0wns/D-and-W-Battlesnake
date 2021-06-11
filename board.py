@@ -2,14 +2,14 @@ import square
 import queue
 
 class Board:
-  MOVES = {
+
+  def __init__(self):
+    self.MOVES = {
       "up": self.get_valid_neighbor_up,
       "down": self.get_valid_neighbor_down,
       "left": self.get_valid_neighbor_left,
       "right": self.get_valid_neighbor_right,
     }
-
-  def __init__(self):
     self.width = -1
     self.height = -1
     self.food = []
