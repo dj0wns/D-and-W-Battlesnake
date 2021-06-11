@@ -17,7 +17,7 @@ class Square:
   #   should clear heads (handled in later step)
   #   should automatically move tail forward
   #   should clear snake distances (handled in later step)
-  def __deepcopy__(self):
+  def __deepcopy__(self, memo):
     copy = type(self)()
 
     copy.contains_food = self.contains_food
