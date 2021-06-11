@@ -122,7 +122,7 @@ def simulate_board_with_move(board, snake_id, x, y):
     new_board.snakes[snake_id]["length"] += 1
     new_board.squares[new_tail_x][new_tail_y].set_contains_snake(snake_id, 1)
     for cell in new_board.snakes[snake_id]["body"]:
-      new_board.square[cell["x"]][cell["y"]].increment_distance_to_vacent()
+      new_board.squares[cell["x"]][cell["y"]].increment_distance_to_vacant()
     new_board.snakes[snake_id]["body"].append({"x":new_tail_x, "y":new_tail_y})
 
   new_board.snakes[snake_id]["head"]["x"] = x
@@ -144,15 +144,22 @@ def evaluate_board(original_board, board, snake_id):
           closest_square_count += 1
   move_score = closest_square_count
   # Adjust for hunger
+  # see if our snake would have eaten this turn
+  ate_food = False
+  for food in original_board.food:
+    if food["x"] == board.snakes[snake_id]["head"]["x"] and food["y"] == board.snakes[snake_id]["head"]["y"]:
+      ate_food = True
   original_food_distance = original_board.get_distance_to_closest_owned_food(snake_id)
   new_food_distance = board.get_distance_to_closest_owned_food(snake_id)
-  if original_food_distance is not None and new_food_distance is not None:
-    if new_food_distance < original_food_distance:
+  if ate_food or (original_food_distance is not None and new_food_distance is not None):
+    if ate_food or new_food_distance < original_food_distance:
       # add factor to lightly encourage our snake to go towards the food
       # max hunger minus current hunger divided by a constant is a good simple way to account for this
       # if a new closer food is spawned out of nowhere it doesnt really affect anything
-      if board.snakes[snake_id]["health"] < 80:
-        move_score += (80 - board.snakes[snake_id]["health"])/2
+      if board.snakes[snake_id]["health"] > 30:
+        move_score += 0.5
+      else:
+        move_score += (30 - board.snakes[snake_id]["health"])
   return move_score
 
 def check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
