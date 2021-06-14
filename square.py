@@ -5,67 +5,85 @@ class Square:
     self.snake_distances = {}
 
   def __str__(self):
-    string = ( f"contains_food: {self.contains_food}\n"
-               f"contains_snake: {self.contains_snake}\n"
-               f"contains_snake_head: {self.contains_snake_head}\n"
-               f"distance_to_vacant: {self.distance_to_vacant}\n"
-               f"snake_distances: {self.snake_distances}\n" )
+    string = f"contains_food: {self.contains_food}\n"
+    for snake_id, snake in self.snakes.items():
+      string += ( f"\tsnake_id: {snake_id}\n"
+                  f"\t\tdistance_to_vacant: {snake['distance_to_vacant']}\n"
+                  f"\t\thead: {snake['head']}\n" )
     return string
 
   # TODO: move this to custom function here and in board class instead of changing deepcopy
   # this is called when simulating a new board state
-  #   should clear heads (handled in later step)
-  #   should automatically move tail forward
-  #   should clear snake distances (handled in later step)
+  #   Keep track of whether or not there was food
+  #   Keep track of snakes
+  #   Clear snake distances (handled by never being set)
+  #   Move tail forward and clear heads (handled by decrement distance to vacant)
   def __deepcopy__(self, memo):
     copy = type(self)()
 
     copy.contains_food = self.contains_food
-    copy.contains_snake = self.contains_snake
-    copy.distance_to_vacant = self.distance_to_vacant - 1 if self.distance_to_vacant else 0
+    copy.snakes = self.snakes
+    copy.decrement_distance_to_vacant()
 
     return copy
 
   # OCCUPANT INFO
   def set_empty(self):
     self.contains_food = False
-    self.contains_snake = None
-    self.contains_snake_head = False
-    self.distance_to_vacant = 0
+    self.snakes = {}
 
   def set_contains_food(self):
     self.contains_food = True
-    self.contains_snake = None
-    self.contains_snake_head = False
-    self.distance_to_vacant = 0
+    self.snakes = {}
 
-  def set_contains_snake(self, snake_id, distance_to_vacant):
-    self.contains_food = False
-    self.contains_snake = snake_id
-    self.contains_snake_head = False
-    if distance_to_vacant > self.distance_to_vacant:
-      # special case to handle how the snake is stacked in the beginning
-      self.distance_to_vacant = distance_to_vacant
+  def add_snake(self, snake_id, distance_to_vacant, head=False):
+    # only set if new snake or new distance_to_vacant is greater
+    self_collision = snake_id in self.snakes.keys()
+    if not self_collision \
+        or distance_to_vacant > self.snakes[snake_id]["distance_to_vacant"]:
+      self.contains_food = False
+      self.snakes[snake_id] = {
+          "distance_to_vacant": distance_to_vacant,
+          "head": head,
+        }
+    return self_collision
 
-  def set_contains_snake_head(self, snake_id, distance_to_vacant):
-    self.contains_food = False
-    self.contains_snake = snake_id
-    self.contains_snake_head = True
-    self.distance_to_vacant = distance_to_vacant
+  def remove_snake(self, snake_id):
+    try:
+      del self.snakes[snake_id]
+    except KeyError:
+      print(f"Tried to remove snake ({snake_id}) from square it is not in")
+
+  def get_snakes(self):
+    return self.snakes.keys()
+
+  def get_snake_heads(self):
+    heads = []
+    for snake_id, snake in self.snakes.items():
+      if snake["head"]:
+        heads.append(snake_id)
+    return heads
 
   # DISTANCE TO VACANT
-  def increment_distance_to_vacant(self):
-    self.distance_to_vacant += 1
+  def longest_distance_to_vacant(self):
+    longest_distance = 0
+    for snake in self.snakes.values():
+      if snake["distance_to_vacant"] > longest_distance:
+        longest_distance = snake["distance_to_vacant"]
+    return longest_distance
+
+  def increment_distance_to_vacant(self, snake_id):
+    self.snakes[snake_id]["distance_to_vacant"] += 1
 
   def decrement_distance_to_vacant(self):
-    if self.distance_to_vacant > 0:
-      self.distance_to_vacant -= 1
-    self.contains_snake_head = False
-    if self.distance_to_vacant == 0:
-      self.contains_snake = None
+    for snake in self.snakes.values():
+      snake["distance_to_vacant"] -= 1
+      snake["head"] = False
+      if snake["distance_to_vacant"] <= 0:
+        del snake
 
   def is_empty(self):
-    return not (self.contains_food or self.contains_snake)
+    return not (self.contains_food or self.snakes)
 
   # SNAKE DISTANCES
   def set_snake_distance(self, snake_id, distance_to_snake):

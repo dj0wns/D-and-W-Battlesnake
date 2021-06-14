@@ -36,10 +36,8 @@ class Board:
     for snake in self.snakes.values():
       for i in range(snake["length"]):
         body = snake["body"][i]
-        if i == 0:
-          self.squares[body["x"]][body["y"]].set_contains_snake_head(snake["id"], snake["length"])
-        else:
-          self.squares[body["x"]][body["y"]].set_contains_snake(snake["id"], snake["length"] - i)
+        self.squares[body["x"]][body["y"]].add_snake(
+            snake["id"], snake["length"]-i, i==0)
 
   def __str__(self):
     string = ( f"Width: {self.width}\n"
@@ -65,8 +63,8 @@ class Board:
 
     # check if square contains snake
     square = self.squares[x][y]
-    if square.contains_snake is not None:
-      if square.distance_to_vacant > distance:
+    if square.snakes:
+      if square.longest_distance_to_vacant() > distance:
         return False
     return True
 

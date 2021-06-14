@@ -39,7 +39,8 @@ def bucketize_move(move, best_moves, board, snake_id):
 
   # if valid move
   if x is not None:
-    new_board = simulate_board_with_move(board, snake_id, x, y)
+    destinations = {snake_id: {"x": x, "y": y}} # TODO: this is where we find possible combinations of other snakes' valid moves
+    new_board = simulate_possible_next_board(board, destinations)
     new_board_value = evaluate_board(board, new_board, snake_id)
 
     # check riskiness
@@ -58,42 +59,93 @@ def bucketize_move(move, best_moves, board, snake_id):
 # makes a new representation of the board if the given snake moved to the given square
 # TODO move other snakes aswell, we are moving their tails but not their heads
 # TODO account for picking up food for other snakes
-def simulate_board_with_move(board, snake_id, x, y):
+# TODO tree: this should take all snakes new destinations (dict of snake_id: (coordinate))
+# TODO: when branching other snakes' possible moves, if only invalid moves available, force move to be in bounds
+def simulate_possible_next_board(board, snake_destinations):
 
   new_board = copy.deepcopy(board)
 
-  # simulate movement:
-  #   construct new body by prepending head and adding all but the last body
-  new_board.snakes[snake_id]["head"]["x"] = x
-  new_board.snakes[snake_id]["head"]["y"] = y
-  new_board.snakes[snake_id]["body"] = [new_board.snakes[snake_id]["head"]] + new_board.snakes[snake_id]["body"][:-1]
-  # Update squares too
-  new_board.squares[x][y].set_contains_snake_head(snake_id, new_board.snakes[snake_id]["length"])
+  dead_snakes = set()
 
-  simulate_if_ate_food(
-      board.squares[x][y],
-      board.snakes[snake_id]["body"][-1],
-      new_board,
-      snake_id)
+  # apply each snake's move
+  for snake_id, head in snake_destinations.items():
+    x = head["x"]
+    y = head["y"]
+
+    # update head
+    new_board.snakes[snake_id]["head"] = head
+    # update new body list to new head + all but old tail
+    new_board.snakes[snake_id]["body"] = \
+        [head] + new_board.snakes[snake_id]["body"][:-1]
+
+    # update square for new head
+    self_collision = new_board.squares[x][y].add_snake(
+        snake_id, new_board.snakes[snake_id]["length"], True)
+
+    if self_collision:
+      dead_snakes.add(snake_id)
+
+    # reduce health
+    new_board.snakes[snake_id]["health"] -= 1
+
+    # if snake ate food
+    if board.squares[x][y].contains_food:
+
+      # increment each snake segment's distance to vacant
+      for segment in new_board.snakes[snake_id]["body"]:
+        new_board.squares[segment["x"]][segment["y"]]\
+            .increment_distance_to_vacant(snake_id)
+      # add newly grown tail on top of current tail in body list
+      new_board.snakes[snake_id]["body"].append(
+          new_board.snakes[snake_id]["body"][-1])
+      # increment snake length
+      new_board.snakes[snake_id]["length"] += 1
+
+      # reset health
+      new_board.snakes[snake_id]["health"] = 100
+
+      # remove from food list
+      try:
+        new_board.food.remove(head)
+      except ValueError:
+        pass
+
+  for snake_id, head in snake_destinations.items():
+    if snake_id in dead_snakes:
+      continue
+
+    # if snake is out of health
+    if new_board.snakes[snake_id]["health"] <= 0:
+      dead_snakes.add(snake_id)
+      continue
+
+    snake_heads = new_board.squares[head["x"]][head["y"]].get_snake_heads()
+    # if head on head collision
+    if snake_heads > 1:
+      current_snake_len = new_board.snakes[snake_id]["length"]
+      for snake_head_id in snake_heads:
+        # ignore our own snake, so we don't eat ourselves <3
+        if snake_head_id != snake_id:
+          # If we are shorter or equal to the other snake we ded
+          if new_board.snakes[snake_head_id]["length"] >= current_snake_len:
+            dead_snake.add(snake_id)
+          # If we are longer or equal to the other snake they ded
+          if new_board.snakes[snake_head_id]["length"] <= current_snake_len:
+            dead_snake.add(snake_head_id)
+
+    # if head on body collision
+    elif new_board.squares[head["x"]][head["y"]].get_snakes() > 1:
+      dead_snake.add(snake_id)
+
+  # remove all dead snakes from board and squares
+  for snake_id in dead_snakes:
+    for body in new_board.snakes[snake_id]["body"]:
+      new_board.squares[body["x"]][body["y"]].remove_snake("snake_id")
+    del new_board.snakes[snake_id]
 
   new_board.calculate_snakes_distances()
 
   return new_board
-
-
-def simulate_if_ate_food(square, old_tail, new_board, snake_id):
-  if square.contains_food:
-
-    # increment snake length
-    new_board.snakes[snake_id]["length"] += 1
-
-    # increment each snake segment's distance to vacant
-    for cell in new_board.snakes[snake_id]["body"]:
-      new_board.squares[cell["x"]][cell["y"]].increment_distance_to_vacant()
-
-    # add new tail to snake body
-    new_board.snakes[snake_id]["body"].append(old_tail)
-    new_board.squares[old_tail["x"]][old_tail["y"]].set_contains_snake(snake_id, 1)
 
 
 def evaluate_board(original_board, board, snake_id):
@@ -134,22 +186,22 @@ def check_turns_until_risky(board, snake_id, x, y):
     turns_until_risky = 1
   return turns_until_risky
 
-
+# Likely deprecated with new strategy
 def check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
-  if x > 0 and board.squares[x-1][y].contains_snake_head:
-    new_snake_id = board.squares[x-1][y].contains_snake
-    if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-      return True
-  if y > 0 and board.squares[x][y-1].contains_snake_head:
-    new_snake_id = board.squares[x][y-1].contains_snake
-    if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-      return True
-  if x < board.width - 1 and board.squares[x+1][y].contains_snake_head:
-    new_snake_id = board.squares[x+1][y].contains_snake
-    if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-      return True
-  if y < board.height - 1 and board.squares[x][y+1].contains_snake_head:
-    new_snake_id = board.squares[x][y+1].contains_snake
-    if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-      return True
+  #if x > 0 and board.squares[x-1][y].get_snake_heads():
+  #  new_snake_id = board.squares[x-1][y].contains_snake
+  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
+  #    return True
+  #if y > 0 and board.squares[x][y-1].get_snake_heads():
+  #  new_snake_id = board.squares[x][y-1].contains_snake
+  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
+  #    return True
+  #if x < board.width - 1 and board.squares[x+1][y].get_snake_heads():
+  #  new_snake_id = board.squares[x+1][y].contains_snake
+  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
+  #    return True
+  #if y < board.height - 1 and board.squares[x][y+1].get_snake_heads():
+  #  new_snake_id = board.squares[x][y+1].contains_snake
+  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
+  #    return True
   return False
