@@ -2,57 +2,102 @@ import random
 
 import board
 
-BUCKETS = ["normal", "risky"]
+BUCKETS = ["normal", "risky", "invalid"]
 
 
 def pick_best_move(board, snake_id):
-  best_moves = {
-    "normal": {
-      "score": -1,
-      "moves": [],
-    },
-    "risky": {
-      "score": -1,
-      "moves": [],
-    },
-  }
-  for move in board.MOVES.keys():
-    bucketize_move(move, best_moves, board, snake_id)
-
-  # return move from best bucket
+  # initialize buckets
+  bucketed_moves = {}
   for bucket in BUCKETS:
-    if best_moves[bucket]["moves"]:
-      return random.choice(best_moves[bucket]["moves"])
-  print("No valid moves.")
-  return random.choice(board.MOVES.keys())
+    bucketed_moves[bucket] = {}
+
+  # bucketize each move
+  for move in board.MOVES.keys():
+    bucket, x, y = bucketize_move(move, board, snake_id)
+    bucketed_moves[bucket][move] = {"x": x, "y": y}
+
+  # find top bucket with moves
+  best_bucket = BUCKETS[-1]
+  for bucket in BUCKETS:
+    if bucketed_moves[bucket]:
+      best_bucket = bucket
+      break
+
+  # only invalid moves
+  if best_bucket == BUCKETS[-1]:
+    print("No valid moves.")
+    return random.choice(bucketed_moves[best_bucket].keys())
+
+  # only one best move
+  elif len(bucketed_moves[best_bucket]) == 1:
+    return bucketed_moves[best_bucket].keys()[0]
+
+  # find best scoring move
+  else:
+    other_snake_destinations = list_valid_other_snake_destinations(board, snake_id)
+    best_score = -1
+    best_moves = []
+    for move, destination in bucketed_moves[best_bucket].items():
+      score = evaluate_destination(destination, board, snake_id, other_snake_destinations)
+      if score > best_score:
+        best_score = score
+        best_moves = [move]
+      elif score == best_score:
+        best_moves.append(move)
+    return random.choice(best_moves)
 
 
-def bucketize_move(move, best_moves, board, snake_id):
+def list_valid_other_snake_destinations(board, snake_id_to_ignore):
+  destinations = []
+  # TODO
 
+  return destinations
+
+
+def bucketize_move(move, board, snake_id):
+
+  # get destination
   x, y = board.get_valid_neighbor(
       move,
       snake_id,
       board.snakes[snake_id]["head"]["x"],
       board.snakes[snake_id]["head"]["y"])
+
   bucket = "normal"
 
-  # if valid move
-  if x is not None:
-    destinations = {snake_id: {"x": x, "y": y}} # TODO: this is where we find possible combinations of other snakes' valid moves
-    new_board = simulate_possible_next_board(board, destinations)
-    new_board_value = evaluate_board(board, new_board, snake_id)
+  # check if destination valid
+  if x is None:
+    bucket = "invalid"
 
-    # check riskiness
+  # check riskiness
+  else:
     turns_until_risky = check_turns_until_risky(board, snake_id, x, y)
     if turns_until_risky:
       bucket = "risky"
 
-    # check if move is better
-    if new_board_value > best_moves[bucket]["score"]:
-      best_moves[bucket]["score"] = new_board_value
-      best_moves[bucket]["moves"] = [move]
-    elif new_board_value == best_moves[bucket]["score"]:
-      best_moves[bucket]["moves"].append(move)
+  return bucket, x, y
+
+
+def evaluate_destination(destination, board, snake_id, other_snake_destinations):
+  worst_score = None
+  for const_destinations in other_snake_destinations:
+    destinations = copy(const_destinations)
+    destinations[snake_id] = destination
+    new_board = simulate_possible_next_board(board, destinations)
+    new_board_value = evaluate_board(board, new_board, snake_id)
+
+    # see if we are the worst board state discovered
+    if worst_score is None or worst_score > new_board_value:
+      worst_score = new_board_value
+
+  # if there are no other snakes (e.g. challenge mission)
+  if worst_score is None:
+    destinations = {}
+    destinations[snake_id] = destination
+    new_board = simulate_possible_next_board(board, destinations)
+    worst_score = evaluate_board(board, new_board, snake_id)
+
+  return worst_score
 
 
 # makes a new representation of the board if the given snake moved to the given square
@@ -120,21 +165,21 @@ def simulate_possible_next_board(board, snake_destinations):
 
     snake_heads = new_board.squares[head["x"]][head["y"]].get_snake_heads()
     # if head on head collision
-    if snake_heads > 1:
+    if len(snake_heads) > 1:
       current_snake_len = new_board.snakes[snake_id]["length"]
       for snake_head_id in snake_heads:
         # ignore our own snake, so we don't eat ourselves <3
         if snake_head_id != snake_id:
           # If we are shorter or equal to the other snake we ded
           if new_board.snakes[snake_head_id]["length"] >= current_snake_len:
-            dead_snake.add(snake_id)
+            dead_snakes.add(snake_id)
           # If we are longer or equal to the other snake they ded
           if new_board.snakes[snake_head_id]["length"] <= current_snake_len:
-            dead_snake.add(snake_head_id)
+            dead_snakes.add(snake_head_id)
 
     # if head on body collision
-    elif new_board.squares[head["x"]][head["y"]].get_snakes() > 1:
-      dead_snake.add(snake_id)
+    elif len(new_board.squares[head["x"]][head["y"]].get_snakes()) > 1:
+      dead_snakes.add(snake_id)
 
   # remove all dead snakes from board and squares
   for snake_id in dead_snakes:
@@ -150,6 +195,8 @@ def simulate_possible_next_board(board, snake_destinations):
 def evaluate_board(original_board, board, snake_id):
   #count how many squares we would be able to get to first
   # TODO account for ties and snake length to determine who really owns the square
+  if snake_id not in board.snakes.keys():
+    return -1
   move_score = 0
   closest_square_count = 0
   for column in board.squares:

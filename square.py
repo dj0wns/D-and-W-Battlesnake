@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 class Square:
 
   def __init__(self):
@@ -21,7 +23,7 @@ class Square:
     copy = type(self)()
 
     copy.contains_food = self.contains_food
-    copy.snakes = self.snakes
+    copy.snakes = deepcopy(self.snakes)
     copy.decrement_distance_to_vacant()
 
     return copy
