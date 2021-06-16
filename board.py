@@ -1,3 +1,4 @@
+from copy import deepcopy
 import square
 import queue
 
@@ -13,7 +14,7 @@ class Board:
     self.width = -1
     self.height = -1
     self.food = []
-    self.snakes = []
+    self.snakes = {}
     self.squares = []
 
   def parse_board(self, data):
@@ -101,6 +102,23 @@ class Board:
       else:
         long_snakes.append(snake_id)
     return long_snakes
+
+  def simulation_copy(self):
+    copy = type(self)()
+
+    copy.width = self.width
+    copy.height = self.height
+    copy.food = deepcopy(self.food)
+    copy.snakes = deepcopy(self.snakes)
+
+    copy.squares = []
+    for column in self.squares:
+      column_copy = []
+      for square in column:
+        column_copy.append(square.simulation_copy())
+      copy.squares.append(column_copy)
+
+    return copy
 
   def get_distance_to_closest_owned_food(self, snake_id):
     closest_food_distance = None

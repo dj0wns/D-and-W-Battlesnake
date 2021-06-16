@@ -1,5 +1,4 @@
 import random
-import copy
 
 import board
 
@@ -63,7 +62,7 @@ def bucketize_move(move, best_moves, board, snake_id):
 # TODO: when branching other snakes' possible moves, if only invalid moves available, force move to be in bounds
 def simulate_possible_next_board(board, snake_destinations):
 
-  new_board = copy.deepcopy(board)
+  new_board = board.simulation_copy()
 
   dead_snakes = set()
 

@@ -12,13 +12,12 @@ class Square:
                   f"\t\thead: {snake['head']}\n" )
     return string
 
-  # TODO: move this to custom function here and in board class instead of changing deepcopy
-  # this is called when simulating a new board state
+  # This is called when simulating a new board state
   #   Keep track of whether or not there was food
   #   Keep track of snakes
   #   Clear snake distances (handled by never being set)
   #   Move tail forward and clear heads (handled by decrement distance to vacant)
-  def __deepcopy__(self, memo):
+  def simulation_copy(self):
     copy = type(self)()
 
     copy.contains_food = self.contains_food
