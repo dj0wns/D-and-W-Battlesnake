@@ -1,3 +1,5 @@
+import copy
+import itertools
 import random
 
 import board
@@ -30,11 +32,14 @@ def pick_best_move(board, snake_id):
 
   # only one best move
   elif len(bucketed_moves[best_bucket]) == 1:
-    return bucketed_moves[best_bucket].keys()[0]
+    #TODO replace with better code (functionally this is equivalent though)
+    for key in bucketed_moves[best_bucket].keys():
+      return bucketed_moves[best_bucket][key]
 
   # find best scoring move
   else:
     other_snake_destinations = list_valid_other_snake_destinations(board, snake_id)
+    print(other_snake_destinations)
     best_score = -1
     best_moves = []
     for move, destination in bucketed_moves[best_bucket].items():
@@ -49,10 +54,24 @@ def pick_best_move(board, snake_id):
 
 def list_valid_other_snake_destinations(board, snake_id_to_ignore):
   destinations = []
-  # TODO
-
-  return destinations
-
+  for snake_id in board.snakes:
+    snake_destinations = []
+    if snake_id == snake_id_to_ignore:
+      continue
+    for move in board.MOVES.keys():
+      # get destination
+      x, y = board.get_valid_neighbor(
+          move,
+          snake_id,
+          board.snakes[snake_id]["head"]["x"],
+          board.snakes[snake_id]["head"]["y"])
+      if x is None:
+        continue
+      snake_destinations.append({snake_id: {"x":x, "y":y}})
+    destinations.append(snake_destinations)
+    #TODO if snake_destinations is valid, add a random in-bounds move
+  print(destinations)
+  return list(itertools.product(*destinations))
 
 def bucketize_move(move, board, snake_id):
 
@@ -81,7 +100,11 @@ def bucketize_move(move, board, snake_id):
 def evaluate_destination(destination, board, snake_id, other_snake_destinations):
   worst_score = None
   for const_destinations in other_snake_destinations:
-    destinations = copy(const_destinations)
+    destinations = {}
+    #TODO replace with better code. other_snake_destinations is a list of tuples of dicts, kind of a weird data format
+    for snake_destination in const_destinations:
+      for snake_dest_id in snake_destination.keys():
+        destinations[snake_dest_id] = snake_destination[snake_dest_id]
     destinations[snake_id] = destination
     new_board = simulate_possible_next_board(board, destinations)
     new_board_value = evaluate_board(board, new_board, snake_id)
@@ -194,6 +217,7 @@ def simulate_possible_next_board(board, snake_destinations):
 
 def evaluate_board(original_board, board, snake_id):
   #count how many squares we would be able to get to first
+  # TODO check for why we sometimews seem to ignore food at low hp
   # TODO account for ties and snake length to determine who really owns the square
   if snake_id not in board.snakes.keys():
     return -1
