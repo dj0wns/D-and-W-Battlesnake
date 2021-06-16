@@ -25,6 +25,7 @@ def pick_best_move(board, snake_id):
       best_bucket = bucket
       break
 
+  print(best_bucket, bucketed_moves[bucket])
   # only invalid moves
   if best_bucket == BUCKETS[-1]:
     print("No valid moves.")
@@ -34,12 +35,11 @@ def pick_best_move(board, snake_id):
   elif len(bucketed_moves[best_bucket]) == 1:
     #TODO replace with better code (functionally this is equivalent though)
     for key in bucketed_moves[best_bucket].keys():
-      return bucketed_moves[best_bucket][key]
+      return key
 
   # find best scoring move
   else:
     other_snake_destinations = list_valid_other_snake_destinations(board, snake_id)
-    print(other_snake_destinations)
     best_score = -1
     best_moves = []
     for move, destination in bucketed_moves[best_bucket].items():
@@ -70,7 +70,6 @@ def list_valid_other_snake_destinations(board, snake_id_to_ignore):
       snake_destinations.append({snake_id: {"x":x, "y":y}})
     destinations.append(snake_destinations)
     #TODO if snake_destinations is valid, add a random in-bounds move
-  print(destinations)
   return list(itertools.product(*destinations))
 
 def bucketize_move(move, board, snake_id):
