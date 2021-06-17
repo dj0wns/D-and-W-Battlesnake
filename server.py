@@ -62,8 +62,8 @@ class Battlesnake(object):
         time_allotted = 350000000 #nanoseconds, generously leaving 50ms over for ping
         move = evaluator.pick_best_move(board, our_snake_id, time_allotted)
         #TODO end timer
-        end = time.time()
-        print(f"MOVE: {move} - Time: {(end-start)/100000}")
+        end = time.time_ns()
+        print(f"MOVE: {move} - Time: {(end-start)/1000000}")
         return {"move": move}
 
     @cherrypy.expose

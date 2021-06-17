@@ -2,10 +2,11 @@ import copy
 import itertools
 import random
 import time
+from collections import Counter
 
 import board
 
-BUCKETS = ["normal", "risky", "invalid"]
+BUCKETS = ["normal", "risky_in_3_5", "risky_in_2", "risky_in_1", "invalid"]
 
 
 def pick_best_move(board, snake_id, time_allotted):
@@ -91,9 +92,16 @@ def bucketize_move(move, board, snake_id):
 
   # check riskiness
   else:
-    turns_until_risky = check_turns_until_risky(board, snake_id, x, y)
-    if turns_until_risky:
-      bucket = "risky"
+    #simulate board with only us moving for riskiness calculation
+    new_board = \
+        simulate_possible_next_board(board, {snake_id: { "x":x, "y":y }})
+    turns_until_risky = check_turns_until_risky(new_board, snake_id)
+    if turns_until_risky == 1:
+      bucket = "risky_in_1"
+    elif turns_until_risky == 2:
+      bucket = "risky_in_2"
+    elif turns_until_risky < 6:
+      bucket = "risky_in_3_5"
 
   return bucket, x, y
 
@@ -211,7 +219,10 @@ def simulate_possible_next_board(board, snake_destinations):
       new_board.squares[body["x"]][body["y"]].remove_snake("snake_id")
     del new_board.snakes[snake_id]
 
-  new_board.calculate_snakes_distances()
+  snakes_with_destinations = list(snake_destinations.keys())
+  snake_ids = list(new_board.snakes.keys())
+  snakes_to_decrement = list((Counter(snakes_with_destinations) - Counter(snake_ids)).elements())
+  new_board.calculate_snakes_distances(snakes_to_decrement)
 
   return new_board
 
@@ -251,28 +262,15 @@ def evaluate_board(original_board, board, snake_id):
   return move_score
 
 
-def check_turns_until_risky(board, snake_id, x, y):
+def check_turns_until_risky(board, snake_id):
   turns_until_risky = 0 # no foreseen riskiness
-  if check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
-    turns_until_risky = 1
+  for column in board.squares:
+    for square in column:
+      closest_snakes = square.get_closest_snake()
+      if snake_id in closest_snakes:
+        if len(closest_snakes) == 1 or \
+            board.get_largest_snakes(closest_snakes) == snake_id:
+          if turns_until_risky < square.get_snake_distance(snake_id):
+            turns_until_risky = square.get_snake_distance(snake_id)
   return turns_until_risky
 
-# Likely deprecated with new strategy
-def check_if_adjacent_longer_enemy_head(board, snake_id, x, y):
-  #if x > 0 and board.squares[x-1][y].get_snake_heads():
-  #  new_snake_id = board.squares[x-1][y].contains_snake
-  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-  #    return True
-  #if y > 0 and board.squares[x][y-1].get_snake_heads():
-  #  new_snake_id = board.squares[x][y-1].contains_snake
-  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-  #    return True
-  #if x < board.width - 1 and board.squares[x+1][y].get_snake_heads():
-  #  new_snake_id = board.squares[x+1][y].contains_snake
-  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-  #    return True
-  #if y < board.height - 1 and board.squares[x][y+1].get_snake_heads():
-  #  new_snake_id = board.squares[x][y+1].contains_snake
-  #  if snake_id != new_snake_id and board.snakes[snake_id]["length"] <= board.snakes[new_snake_id]["length"]:
-  #    return True
-  return False

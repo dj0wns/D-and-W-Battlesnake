@@ -133,24 +133,28 @@ class Board:
             closest_food_distance = distance
     return closest_food_distance
   
-  def calculate_snakes_distances(self):
+  def calculate_snakes_distances(self, snakes_to_decrement=[]):
     for snake in self.snakes.values():
       #init queue
       bfs_queue = queue.SimpleQueue()
       #breath first search for each snake
       starting_x = snake["head"]["x"]
       starting_y = snake["head"]["y"]
+      starting_distance = 1
+      # Decrement the starting values of given snakes to simulate if they had moved in every possible direction the previous turn
+      if snake["id"] in snakes_to_decrement:
+        starting_distance = 0
       # TODO touches every square at least twice when backtracking
-      x, y = self.get_valid_neighbor_up(snake["id"], starting_x, starting_y, 1)
+      x, y = self.get_valid_neighbor_up(snake["id"], starting_x, starting_y, starting_distance)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_down(snake["id"], starting_x, starting_y, 1)
+      x, y = self.get_valid_neighbor_down(snake["id"], starting_x, starting_y, starting_distance)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_left(snake["id"], starting_x, starting_y, 1)
+      x, y = self.get_valid_neighbor_left(snake["id"], starting_x, starting_y, starting_distance)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
-      x, y = self.get_valid_neighbor_right(snake["id"], starting_x, starting_y, 1)
+      x, y = self.get_valid_neighbor_right(snake["id"], starting_x, starting_y, starting_distance)
       if x is not None:
         bfs_queue.put({"x":x, "y":y, "depth":1})
       # execute queue
