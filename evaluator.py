@@ -1,13 +1,15 @@
 import copy
 import itertools
 import random
+import time
 
 import board
 
 BUCKETS = ["normal", "risky", "invalid"]
 
 
-def pick_best_move(board, snake_id):
+def pick_best_move(board, snake_id, time_allotted):
+  start = time.time_ns()
   # initialize buckets
   bucketed_moves = {}
   for bucket in BUCKETS:

@@ -1,5 +1,6 @@
 import os
 import random
+import time
 
 import cherrypy
 
@@ -41,6 +42,7 @@ class Battlesnake(object):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def move(self):
+        start = time.time_ns()
         # This function is called on every turn of a game. It's how your snake decides where to move.
         # Valid moves are "up", "down", "left", or "right".
         # TODO Start Timer
@@ -57,10 +59,11 @@ class Battlesnake(object):
         #print(board)
 
         # from this board, pick the best move
-        move = evaluator.pick_best_move(board, our_snake_id)
+        time_allotted = 350000000 #nanoseconds, generously leaving 50ms over for ping
+        move = evaluator.pick_best_move(board, our_snake_id, time_allotted)
         #TODO end timer
-
-        print(f"MOVE: {move}")
+        end = time.time()
+        print(f"MOVE: {move} - Time: {(end-start)/100000}")
         return {"move": move}
 
     @cherrypy.expose
