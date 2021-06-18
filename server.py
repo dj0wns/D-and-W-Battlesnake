@@ -23,7 +23,7 @@ class Battlesnake(object):
         return {
             "apiversion": "1",
             "author": "dj0wns",
-            "color": "#9999FF",
+            "color": "#99FFFF",
             "head": "safe",
             "tail": "fat-rattle",
         }
@@ -59,11 +59,11 @@ class Battlesnake(object):
         #print(board)
 
         # from this board, pick the best move
-        time_allotted = 350000000 #nanoseconds, generously leaving 50ms over for ping
+        time_allotted = 290000000 #nanoseconds, generously leaving 50ms over for ping
         move = evaluator.pick_best_move(board, our_snake_id, time_allotted)
         #TODO end timer
         end = time.time_ns()
-        print(f"MOVE: {move} - Time: {(end-start)/1000000}")
+        #print(f"MOVE: {move} - Time: {(end-start)/1000000}")
         return {"move": move}
 
     @cherrypy.expose

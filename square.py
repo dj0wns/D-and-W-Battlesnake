@@ -53,7 +53,7 @@ class Square:
     try:
       del self.snakes[snake_id]
     except KeyError:
-      print(f"Tried to remove snake ({snake_id}) from square it is not in")
+      pass
 
   def get_snakes(self):
     return self.snakes.keys()
@@ -77,11 +77,14 @@ class Square:
     self.snakes[snake_id]["distance_to_vacant"] += 1
 
   def decrement_distance_to_vacant(self):
-    for snake in self.snakes.values():
+    snake_ids_to_remove = []
+    for snake_id, snake in self.snakes.items():
       snake["distance_to_vacant"] -= 1
       snake["head"] = False
       if snake["distance_to_vacant"] <= 0:
-        del snake
+        snake_ids_to_remove.append(snake_id)
+    for snake_id in snake_ids_to_remove:
+      del self.snakes[snake_id]
 
   def is_empty(self):
     return not (self.contains_food or self.snakes)

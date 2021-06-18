@@ -6,7 +6,8 @@ from collections import Counter
 
 import board
 
-BUCKETS = ["normal", "risky_in_3_5", "risky_in_2", "risky_in_1", "invalid"]
+BUCKETS = ["normal", "risky_in_3", "risky_in_2", "risky_in_1", "death_in_1", "invalid"]
+STEP = 1 # Might want deeper steps in future
 
 
 def pick_best_move(board, snake_id, time_allotted):
@@ -28,11 +29,11 @@ def pick_best_move(board, snake_id, time_allotted):
       best_bucket = bucket
       break
 
-  print(best_bucket, bucketed_moves[bucket])
+  #print(best_bucket, bucketed_moves[bucket])
   # only invalid moves
   if best_bucket == BUCKETS[-1]:
-    print("No valid moves.")
-    return random.choice(bucketed_moves[best_bucket].keys())
+    #print("No valid moves.")
+    return random.choice(list(board.MOVES.keys()))
 
   # only one best move
   elif len(bucketed_moves[best_bucket]) == 1:
@@ -43,15 +44,37 @@ def pick_best_move(board, snake_id, time_allotted):
   # find best scoring move
   else:
     other_snake_destinations = list_valid_other_snake_destinations(board, snake_id)
+
+    # initialize worst scores per move
+    worst_scores = {}
+    for move in bucketed_moves[best_bucket].keys():
+      worst_scores[move] = None
+
+    # simulate each move, keeping track of current worst score before time out
+    time_out = False
+    for i in range(0, len(other_snake_destinations), STEP):
+      for move, destination in bucketed_moves[best_bucket].items():
+        score = evaluate_destination(destination, board, snake_id, other_snake_destinations, i, i+STEP)
+        if worst_scores[move] is None or score < worst_scores[move]:
+          worst_scores[move] = score
+        elapsed_time = time.time_ns() - start
+        if elapsed_time >= time_allotted:
+          time_out = True
+          break
+      if time_out:
+        break
+    #print(f"Executed {i} simulations in {elapsed_time/1000000} ms")
+
+    # find best of the worst scores per move
     best_score = -1
     best_moves = []
-    for move, destination in bucketed_moves[best_bucket].items():
-      score = evaluate_destination(destination, board, snake_id, other_snake_destinations)
-      if score > best_score:
+    for move, score in worst_scores.items():
+      if score is not None and score > best_score:
         best_score = score
         best_moves = [move]
-      elif score == best_score:
+      elif score is not None and score == best_score:
         best_moves.append(move)
+
     return random.choice(best_moves)
 
 
@@ -62,7 +85,6 @@ def list_valid_other_snake_destinations(board, snake_id_to_ignore):
     if snake_id == snake_id_to_ignore:
       continue
     for move in board.MOVES.keys():
-      # get destination
       x, y = board.get_valid_neighbor(
           move,
           snake_id,
@@ -96,24 +118,26 @@ def bucketize_move(move, board, snake_id):
     new_board = \
         simulate_possible_next_board(board, {snake_id: { "x":x, "y":y }})
     turns_until_risky = check_turns_until_risky(new_board, snake_id)
+    if turns_until_risky == 0:
+      bucket = "death_in_1"
     if turns_until_risky == 1:
       bucket = "risky_in_1"
     elif turns_until_risky == 2:
       bucket = "risky_in_2"
-    elif turns_until_risky < 6:
-      bucket = "risky_in_3_5"
+    elif turns_until_risky  == 3:
+      bucket = "risky_in_3"
 
   return bucket, x, y
 
 
-def evaluate_destination(destination, board, snake_id, other_snake_destinations):
+def evaluate_destination(destination, board, snake_id, other_snake_destinations, osd_start_index, osd_stop_index):
   worst_score = None
-  for const_destinations in other_snake_destinations:
+  for i in range(osd_start_index, osd_stop_index):
     destinations = {}
     #TODO replace with better code. other_snake_destinations is a list of tuples of dicts, kind of a weird data format
-    for snake_destination in const_destinations:
-      for snake_dest_id in snake_destination.keys():
-        destinations[snake_dest_id] = snake_destination[snake_dest_id]
+    for other_snake_destination in other_snake_destinations[i]:
+      for snake_dest_id in other_snake_destination.keys():
+        destinations[snake_dest_id] = other_snake_destination[snake_dest_id]
     destinations[snake_id] = destination
     new_board = simulate_possible_next_board(board, destinations)
     new_board_value = evaluate_board(board, new_board, snake_id)
@@ -263,7 +287,7 @@ def evaluate_board(original_board, board, snake_id):
 
 
 def check_turns_until_risky(board, snake_id):
-  turns_until_risky = 0 # no foreseen riskiness
+  turns_until_risky = 0 # extremely risky!
   for column in board.squares:
     for square in column:
       closest_snakes = square.get_closest_snake()
